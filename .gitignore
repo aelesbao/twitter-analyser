@@ -1,2 +1,5 @@
 *.class
 *.log
+
+# Docker Compose
+/.volumes

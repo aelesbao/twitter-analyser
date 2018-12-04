@@ -1,0 +1,100 @@
+version: "3.7"
+
+services:
+  zookeeper:
+    image: zookeeper:3.4
+    restart: unless-stopped
+    environment:
+      ZOO_MY_ID: 1
+      ZOO_PORT: 2181
+      ZOO_SERVERS: server.1=zookeeper:2888:3888
+    volumes:
+      - ./.volumes/zookeeper/data:/data
+      - ./.volumes/zookeeper/datalog:/datalog
+    ports:
+      - 2181
+
+  kafka1: &kafka
+    image: confluentinc/cp-kafka:5.0.1
+    environment: &kafka_env
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: LISTENER_DOCKER_INTERNAL://kafka1:19092,LISTENER_DOCKER_EXTERNAL://${DOCKER_HOST_IP:-127.0.0.1}:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: LISTENER_DOCKER_INTERNAL:PLAINTEXT,LISTENER_DOCKER_EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: LISTENER_DOCKER_INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      CONFLUENT_METRICS_ENABLE: "false"
+      KAFKA_LOG4J_LOGGERS: "kafka.controller=INFO,kafka.producer.async.DefaultEventHandler=INFO,state.change.logger=INFO"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./.volumes/kafka/1:/var/lib/kafka/data
+    ports:
+      - 9092:9092
+    depends_on:
+      - zookeeper
+
+  kafka2:
+    <<: *kafka
+    environment:
+      <<: *kafka_env
+      KAFKA_BROKER_ID: 2
+      KAFKA_ADVERTISED_LISTENERS: LISTENER_DOCKER_INTERNAL://kafka2:19093,LISTENER_DOCKER_EXTERNAL://${DOCKER_HOST_IP:-127.0.0.1}:9093
+    volumes:
+      - ./.volumes/kafka/2:/var/lib/kafka/data
+    ports:
+      - 9093:9093
+
+  kafka-rest-proxy:
+    image: confluentinc/cp-kafka-rest:5.0.0
+    environment:
+      KAFKA_REST_LISTENERS: http://0.0.0.0:8082/
+      KAFKA_REST_HOST_NAME: kafka-rest-proxy
+      KAFKA_REST_BOOTSTRAP_SERVERS: PLAINTEXT://kafka1:19092
+    ports:
+      - 8082
+    depends_on:
+      - zookeeper
+      - kafka1
+
+  kafka-topics-ui:
+    image: landoop/kafka-topics-ui:0.9.4
+    hostname: kafka-topics-ui
+    ports:
+      - 8000
+    environment:
+      KAFKA_REST_PROXY_URL: "http://kafka-rest-proxy:8082/"
+      PROXY: "true"
+    depends_on:
+      - zookeeper
+      - kafka1
+      - kafka-rest-proxy
+
+  kafka-manager:
+    image: sheepkiller/kafka-manager
+    environment:
+      ZK_HOSTS: zookeeper:2181
+      APPLICATION_SECRET: pass
+      KM_ARGS: -Djava.net.preferIPv4Stack=true
+    ports:
+      - 9000
+    depends_on:
+      - zookeeper
+      - kafka1
+
+  zoonavigator-api:
+    image: elkozmon/zoonavigator-api:0.4.0
+    environment:
+      SERVER_HTTP_PORT: 9000
+    depends_on:
+      - zookeeper
+
+  zoonavigator-web:
+    image: elkozmon/zoonavigator-web:0.4.0
+    ports:
+     - 8000
+    environment:
+      API_HOST: "zoonavigator-api"
+      API_PORT: 9000
+    depends_on:
+     - zoonavigator-api
