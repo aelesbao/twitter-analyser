@@ -10,6 +10,7 @@ lazy val root = (project in file("."))
 lazy val producer = (project in file("producer"))
   .settings(commonSettings: _*)
   .settings(libraryDependencies ++=
+            Dependencies.kafka ++
             Dependencies.logging ++
             Dependencies.config)
 
