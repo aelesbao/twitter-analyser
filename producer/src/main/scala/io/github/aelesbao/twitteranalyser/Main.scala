@@ -26,10 +26,14 @@ object Main extends App with LazyLogging {
   logger.info("Sending record")
   val record = new ProducerRecord[String, String]("test_topic", "key", "hello from the other side!")
   producer.send(record, (metadata: RecordMetadata, exception: Exception) => {
-    if (exception != null)
-      logger.error("Record send failed", exception)
+    if (exception == null)
+      logger.info("Record sent [" +
+                    s"topic=${metadata.topic()}, " +
+                    s"partition=${metadata.partition()}, " +
+                    s"offset=${metadata.offset()}, " +
+                    s"timestamp=${metadata.timestamp()}]")
     else
-      logger.info(s"Record sent: $metadata")
+      logger.error("Record send failed", exception)
   })
 
   logger.info("Flushing data and closing producer")
