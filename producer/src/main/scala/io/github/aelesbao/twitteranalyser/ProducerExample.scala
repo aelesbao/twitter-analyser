@@ -13,7 +13,7 @@ import org.apache.kafka.common.serialization.StringSerializer
   *              --create --topic test_topic \
   *              --partitions 3 --replication-factor 1
   */
-object Main extends App with LazyLogging {
+object ProducerExample extends App with LazyLogging {
   logger.info("Initializing producer")
   val properties = new Properties {
     put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "0.0.0.0:9092,0.0.0.0:9093")
