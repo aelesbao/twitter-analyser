@@ -11,10 +11,13 @@ lazy val producer = (project in file("producer"))
   .settings(commonSettings: _*)
   .settings(libraryDependencies ++=
             Dependencies.kafka ++
+            Dependencies.twitter ++
             Dependencies.logging ++
             Dependencies.config)
 
 def commonSettings: Seq[Setting[_]] = Seq(
+  resolvers += Resolver.sonatypeRepo("releases"),
+
   javacOptions in Compile ++= Seq("-encoding", "UTF-8", "-source", "1.8"),
   javacOptions in(Compile, compile) ++= Seq("-Xlint:unchecked", "-Xlint:deprecation", "-parameters", "-Werror"),
   scalacOptions ++= Seq("-feature", "-deprecation"),

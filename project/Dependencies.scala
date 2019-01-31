@@ -1,15 +1,22 @@
 import sbt._
 
 object Version {
+  val kafka = "2.1.0"
+  val twitter4s = "5.5"
+  val json4s = "3.6.4"
   val log4j = "2.11.1"
   val slf4j = "1.7.25"
   val scalaLogging = "3.9.2"
-  val kafka = "2.1.0"
 }
 
 object Dependencies {
   val kafka: Seq[ModuleID] = Seq(
     "org.apache.kafka" % "kafka-clients" % Version.kafka
+  )
+
+  val twitter: Seq[ModuleID] = Seq(
+    "com.danielasfregola" %% "twitter4s" % Version.twitter4s,
+    "org.json4s" %% "json4s-native" % Version.json4s
   )
 
   val logging: Seq[ModuleID] = Seq(
