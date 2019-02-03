@@ -5,15 +5,27 @@ version      in ThisBuild := "0.1.0-SNAPSHOT"
 lazy val root = (project in file("."))
   .settings(name := "twitter-analyser")
   .aggregate(producer)
+  .aggregate(consumer)
   .settings(commonSettings: _*)
 
-lazy val producer = (project in file("producer"))
+lazy val common = (project in file("common"))
   .settings(commonSettings: _*)
   .settings(libraryDependencies ++=
-            Dependencies.kafka ++
-            Dependencies.twitter ++
-            Dependencies.logging ++
-            Dependencies.config)
+              Dependencies.kafka ++
+              Dependencies.logging ++
+              Dependencies.config)
+
+lazy val producer = (project in file("producer"))
+  .dependsOn(common)
+  .settings(commonSettings: _*)
+  .settings(libraryDependencies ++=
+              Dependencies.twitter)
+
+lazy val consumer = (project in file("consumer"))
+  .dependsOn(common)
+  .settings(commonSettings: _*)
+  .settings(libraryDependencies ++=
+              Dependencies.elasticsearch)
 
 def commonSettings: Seq[Setting[_]] = Seq(
   resolvers += Resolver.sonatypeRepo("releases"),

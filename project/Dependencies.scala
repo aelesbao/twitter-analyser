@@ -3,6 +3,7 @@ import sbt._
 object Version {
   val kafka = "2.1.0"
   val twitter4s = "5.5"
+  val elastic4s = "6.5.1"
   val json4s = "3.6.4"
   val log4j = "2.11.1"
   val slf4j = "1.7.25"
@@ -17,6 +18,11 @@ object Dependencies {
   val twitter: Seq[ModuleID] = Seq(
     "com.danielasfregola" %% "twitter4s" % Version.twitter4s,
     "org.json4s" %% "json4s-native" % Version.json4s
+  )
+
+  val elasticsearch: Seq[ModuleID] = Seq(
+    "com.sksamuel.elastic4s" %% "elastic4s-core" % Version.elastic4s,
+    "com.sksamuel.elastic4s" %% "elastic4s-http" % Version.elastic4s
   )
 
   val logging: Seq[ModuleID] = Seq(
