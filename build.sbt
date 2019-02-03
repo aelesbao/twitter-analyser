@@ -20,7 +20,16 @@ def commonSettings: Seq[Setting[_]] = Seq(
 
   javacOptions in Compile ++= Seq("-encoding", "UTF-8", "-source", "1.8"),
   javacOptions in(Compile, compile) ++= Seq("-Xlint:unchecked", "-Xlint:deprecation", "-parameters", "-Werror"),
-  scalacOptions ++= Seq("-feature", "-deprecation"),
+
+  scalacOptions ++= Seq("-language:postfixOps",
+                        "-language:implicitConversions",
+                        "-language:existentials",
+                        "-feature",
+                        "-deprecation",
+                        "-encoding",
+                        "UTF-8",
+                        "-Xlint",
+                        "-unchecked"),
 
   // Display run times of individual tests
   testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-oD"),
