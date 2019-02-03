@@ -2,13 +2,12 @@ package io.github.aelesbao.twitteranalyser
 
 import com.danielasfregola.twitter4s.TwitterStreamingClient
 import com.danielasfregola.twitter4s.entities.Tweet
+import com.danielasfregola.twitter4s.entities.streaming.CommonStreamingMessage
 import com.danielasfregola.twitter4s.http.serializers.JsonSupport
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.kafka.clients.producer._
 
-class TwitterProducer extends Runnable
-  with LazyLogging
-  with JsonSupport {
+class TwitterProducer extends Runnable with LazyLogging with JsonSupport {
 
   private val client = TwitterStreamingClient()
   private val terms = Conf.twitter.terms
@@ -18,11 +17,12 @@ class TwitterProducer extends Runnable
 
   override def run(): Unit = {
     logger.info("Starting statuses filter")
+    client.filterStatuses(tracks = terms, stall_warnings = true)(processStatus)
+  }
 
-    client.filterStatuses(tracks = terms, stall_warnings = true) {
-      case tweet: Tweet => publish(tweet)
-      case msg => logger.info(msg.toString)
-    }
+  private def processStatus: PartialFunction[CommonStreamingMessage, Unit] = {
+    case tweet: Tweet => publish(tweet)
+    case msg => logger.info(msg.toString)
   }
 
   private def publish(tweet: Tweet): Unit = {
@@ -36,6 +36,14 @@ class TwitterProducer extends Runnable
   }
 }
 
+/**
+  * Before running this example, start Kafka using docker-compose up and then create the topic:
+  *
+  * kafka-topics --zookeeper $(dc port zookeeper 2181) \
+  * --create --topic twitter_tweets \
+  * --partitions 6 --replication-factor 2
+  */
 object TwitterProducer extends App {
-  new TwitterProducer().run()
+  val twitterProducer = new TwitterProducer()
+  twitterProducer.run()
 }
