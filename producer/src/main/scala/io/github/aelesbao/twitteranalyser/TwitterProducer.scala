@@ -13,10 +13,10 @@ class TwitterProducer extends Runnable with LazyLogging with JsonSupport {
   private val terms = ProducerConfig.twitter.terms
 
   private val producer = new KafkaProducer[String, String](ProducerConfig.kafka.producerProperties)
-  private val topic = ProducerConfig.kafka.topic
+  private val topic = ProducerConfig.kafka.topics("tweets")
 
   override def run(): Unit = {
-    logger.info("Starting statuses filter")
+    logger.info(s"Starting producer and streaming to $topic")
     client.filterStatuses(tracks = terms, stall_warnings = true)(processStatus)
   }
 
@@ -40,8 +40,8 @@ class TwitterProducer extends Runnable with LazyLogging with JsonSupport {
   * Before running this example, start Kafka using docker-compose up and then create the topic:
   *
   * kafka-topics --zookeeper $(dc port zookeeper 2181) \
-  * --create --topic twitter_tweets \
-  * --partitions 6 --replication-factor 2
+  *   --create --topic streaming.twitter.tweets \
+  *   --partitions 6 --replication-factor 2
   */
 object TwitterProducer extends App {
   val twitterProducer = new TwitterProducer()
