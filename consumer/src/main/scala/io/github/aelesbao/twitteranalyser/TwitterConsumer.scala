@@ -4,14 +4,15 @@ import java.util
 
 import com.sksamuel.elastic4s.http.{ElasticError, RequestFailure, RequestSuccess}
 import com.sksamuel.elastic4s.http.ElasticDsl._
+import com.sksamuel.elastic4s.indexes.IndexRequest
 import com.typesafe.scalalogging.LazyLogging
-import org.apache.kafka.clients.consumer.KafkaConsumer
+import org.apache.kafka.clients.consumer.{ConsumerRecord, KafkaConsumer}
 
 import scala.collection.JavaConverters._
 import scala.compat.java8.DurationConverters._
+import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
 import scala.util.Try
 
 object TwitterConsumer extends App {
@@ -31,7 +32,9 @@ class TwitterConsumer() extends Runnable with AutoCloseable with LazyLogging {
   override def run(): Unit = {
     Try {
       Await.result(createTweetsIndex(), 5 seconds)
-      consumeTweets()
+      while (true) {
+        Await.result(consumeTweets(), 5 seconds)
+      }
     }.failed.foreach(logger.error("Failed to consume tweets", _))
 
     close()
@@ -56,46 +59,52 @@ class TwitterConsumer() extends Runnable with AutoCloseable with LazyLogging {
   private def resourceAlreadyExists(status: Int, error: ElasticError): Boolean =
     status == 400 && error.`type` == "resource_already_exists_exception"
 
-  private def consumeTweets(): Unit =
-    while (true) {
-      val records = consumer.poll(1.second.toJava).asScala
-      if (records.nonEmpty) {
-        logger.info(s"Indexing ${records.size} tweets in Elasticsearch")
+  private def consumeTweets(): Future[_] =
+    for {
+      records <- Future(consumer.poll(1.second.toJava).asScala)
+      response <- indexRecords(records)
+    } yield response
 
-        val recordsByPartition = records
-          .groupBy(_.partition())
-          .mapValues(_.size)
-          .map { case (partition, size) => s"$partition=$size" }
-          .mkString(", ")
-        logger.debug(s"Records per partition: $recordsByPartition")
+  private def indexRecords(records: Iterable[ConsumerRecord[String, String]]): Future[_] =
+    if (records.nonEmpty) {
+      logger.info(s"Indexing ${records.size} tweets in Elasticsearch")
 
-        val requests = records
-          .map(record => indexInto(indexName, "json")
-            .id(record.key())
-            .source(record.value()))
+      val recordsByPartition = records
+        .groupBy(_.partition())
+        .mapValues(_.size)
+        .map { case (partition, size) => s"$partition=$size" }
+        .mkString(", ")
+      logger.debug(s"Records per partition: $recordsByPartition")
 
-        val request = client.execute(bulk(requests))
-        Await.result(request, 5 seconds) match {
-          case RequestSuccess(_, _, _, bulkResponse) =>
-            logger.info(s"Indexed ${bulkResponse.successes.size} tweets successfully, " +
-                          s"${bulkResponse.failures.size} failed")
+      client.execute {
+        val requests = records.map(indexRecordRequest)
+        bulk(requests)
+      } map {
+        case RequestSuccess(_, _, _, bulkResponse) =>
+          logger.info(s"Indexed ${bulkResponse.successes.size} tweets successfully, " +
+                        s"${bulkResponse.failures.size} failed")
 
-            if (bulkResponse.hasFailures) {
-              val failures = bulkResponse.failures
-              logger.warn(s"No offsets will be committed. Please, check failures: $failures")
-            }
-            else {
-              logger.debug("Committing offsets...")
-              consumer.commitSync()
-              logger.debug("Offsets have been committed")
-            }
-
-          case RequestFailure(status, _, _, error) =>
-            logger.error(s"Bulk insert failed with status $status: $error")
+          if (bulkResponse.hasFailures) {
+            val failures = bulkResponse.failures
+            logger.warn(s"No offsets will be committed. Please, check failures: $failures")
+          }
+          else {
+            logger.debug("Committing offsets...")
             consumer.commitSync()
-        }
+            logger.debug("Offsets have been committed")
+          }
+
+        case RequestFailure(status, _, _, error) =>
+          logger.error(s"Bulk insert failed with status $status: $error")
+          consumer.commitSync()
       }
     }
+    else Future.unit
+
+  private def indexRecordRequest(record: ConsumerRecord[String, String]): IndexRequest =
+    indexInto(indexName, "json")
+      .id(record.key())
+      .source(record.value())
 
   override def close(): Unit = {
     logger.info("Closing Kafka consumer")
