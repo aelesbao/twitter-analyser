@@ -96,7 +96,6 @@ class TwitterConsumer() extends Runnable with AutoCloseable with LazyLogging {
 
         case RequestFailure(status, _, _, error) =>
           logger.error(s"Bulk insert failed with status $status: $error")
-          consumer.commitSync()
       }
     }
     else Future.unit
