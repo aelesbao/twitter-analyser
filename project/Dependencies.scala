@@ -37,4 +37,8 @@ object Dependencies {
     "com.typesafe" % "config" % "1.3.3",
     "com.github.pureconfig" %% "pureconfig" % "0.10.1"
   )
+
+  val utilities: Seq[ModuleID] = Seq(
+    "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.0"
+  )
 }

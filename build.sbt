@@ -13,7 +13,8 @@ lazy val common = (project in file("common"))
   .settings(libraryDependencies ++=
               Dependencies.kafka ++
               Dependencies.logging ++
-              Dependencies.config)
+              Dependencies.config ++
+              Dependencies.utilities)
 
 lazy val producer = (project in file("producer"))
   .dependsOn(common)
