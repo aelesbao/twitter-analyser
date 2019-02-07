@@ -32,9 +32,7 @@ class TwitterConsumer() extends Runnable with AutoCloseable with LazyLogging {
   override def run(): Unit = {
     Try {
       Await.result(createTweetsIndex(), 5 seconds)
-      while (true) {
-        Await.result(consumeTweets(), 5 seconds)
-      }
+      Await.result(consumeTweets(), Duration.Inf)
     }.failed.foreach(logger.error("Failed to consume tweets", _))
 
     close()
@@ -62,8 +60,9 @@ class TwitterConsumer() extends Runnable with AutoCloseable with LazyLogging {
   private def consumeTweets(): Future[_] =
     for {
       records <- Future(consumer.poll(1.second.toJava).asScala)
-      response <- indexRecords(records)
-    } yield response
+      _ <- indexRecords(records)
+      next <- consumeTweets()
+    } yield next
 
   private def indexRecords(records: Iterable[ConsumerRecord[String, String]]): Future[_] =
     if (records.nonEmpty) {
