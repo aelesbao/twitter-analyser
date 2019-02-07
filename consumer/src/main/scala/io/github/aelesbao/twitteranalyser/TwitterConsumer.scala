@@ -72,8 +72,7 @@ class TwitterConsumer() extends Runnable with AutoCloseable with LazyLogging {
         .groupBy(_.partition())
         .mapValues(_.size)
         .map { case (partition, size) => s"$partition=$size" }
-        .mkString(", ")
-      logger.debug(s"Records per partition: $recordsByPartition")
+      logger.debug(s"Records per partition: ${recordsByPartition.mkString(", ")}")
 
       client.execute {
         val requests = records.map(indexRecordRequest)

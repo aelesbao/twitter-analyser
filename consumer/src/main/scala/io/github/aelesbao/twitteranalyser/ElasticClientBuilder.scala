@@ -23,7 +23,7 @@ object HttpClientCredentialsConfigCallback extends HttpClientConfigCallback {
     httpClientBuilder.setDefaultCredentialsProvider(credentialsProvider)
 }
 
-object ElasticClientBuilder extends LazyLogging {
+object ElasticClientBuilder {
   def build(): ElasticClient = {
     val properties = ElasticProperties(ConsumerConfig.elasticsearch.endpoint)
     ElasticClient(properties, NoOpRequestConfigCallback, HttpClientCredentialsConfigCallback)
