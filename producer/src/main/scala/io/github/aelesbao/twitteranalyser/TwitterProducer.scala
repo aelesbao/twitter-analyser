@@ -16,7 +16,7 @@ class TwitterProducer extends Runnable with LazyLogging with JsonSupport {
   private val topic = ProducerConfig.kafka.topics("tweets")
 
   override def run(): Unit = {
-    logger.info(s"Starting producer and streaming to $topic")
+    logger.info(s"Filtering Twitter terms [${terms.mkString(", ")}] and streaming to $topic")
     client.filterStatuses(tracks = terms, stall_warnings = true)(processStatus)
   }
 
