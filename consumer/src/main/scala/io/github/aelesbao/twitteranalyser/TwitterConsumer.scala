@@ -32,7 +32,7 @@ class TwitterConsumer() extends Runnable with AutoCloseable with LazyLogging {
   override def run(): Unit = {
     Try {
       Await.result(createTweetsIndex(), 5 seconds)
-      Await.result(consumeTweets(), Duration.Inf)
+      consumeTweets()
     }.failed.foreach(logger.error("Failed to consume tweets", _))
 
     close()
@@ -57,12 +57,9 @@ class TwitterConsumer() extends Runnable with AutoCloseable with LazyLogging {
   private def resourceAlreadyExists(status: Int, error: ElasticError): Boolean =
     status == 400 && error.`type` == "resource_already_exists_exception"
 
-  private def consumeTweets(): Future[_] =
-    for {
-      records <- Future(consumer.poll(1.second.toJava).asScala)
-      _ <- indexRecords(records)
-      next <- consumeTweets()
-    } yield next
+  private def consumeTweets(): Unit =
+    Stream.continually(consumer.poll(1.second.toJava).asScala)
+      .foreach(indexRecords)
 
   private def indexRecords(records: Iterable[ConsumerRecord[String, String]]): Future[_] =
     if (records.nonEmpty) {
