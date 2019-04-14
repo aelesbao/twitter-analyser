@@ -15,7 +15,7 @@ services:
       - 2181
 
   kafka1: &kafka
-    image: confluentinc/cp-kafka:5.0.1
+    image: confluentinc/cp-kafka:5.2.1
     environment: &kafka_env
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
